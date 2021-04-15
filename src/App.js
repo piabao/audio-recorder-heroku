@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useReducer, useRef} from "react";
 import { withStyles } from "@material-ui/core/styles";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import QueueMusicIcon from '@material-ui/icons/QueueMusic';
@@ -7,7 +7,10 @@ import StopIcon from '@material-ui/icons/Stop';
 import ReactPlayer from 'react-player'
 import {WhatsappShareButton} from "react-share";
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
+import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import {  Grid, Card, CardHeader, CardContent, Avatar, IconButton, Button, Box } from "@material-ui/core";
+import { storage } from './firebase';
+import FileSaver from 'file-saver';
 
 const styles = theme => ({
   root: {
@@ -40,17 +43,26 @@ const styles = theme => ({
     "url(https://images.unsplash.com/photo-1548504778-b14db6c34b04?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8) center center",
       //"url(https://png.pngtree.com/thumb_back/fw800/back_our/20190619/ourmid/pngtree-minimalist-music-master-background-image_133616.jpg) center center",
     flex: 1
-  }
+  },
+  box: {
+    [theme.breakpoints.up("md")]: {
+      display: "inline"
+    }
+  },
 });
 
 function App({ classes }){ 
   const video_link = "https://download-a.akamaihd.net/files/media_publication/e1/sjjm_CR_022_r720P.mp4";
 
+  //const [audioName, setAudioName] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
   const [recorder, setRecorder] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
   const [playerState, setPlayerState] = useState({
     playing: false,
-  }); 
+  });
+
+  const audioName = useRef();
   
   const togglePlay = ()=>{
     if(playerState.playing){
@@ -72,7 +84,11 @@ function App({ classes }){
     const blob = new Blob(recordedChunks, {
       type: "video/webm"
     });
-    setVideoUrl(URL.createObjectURL(blob));
+    audioName.current = `record-${new Date().getTime()}.webm`
+    //setAudioName();
+    blobFromURL(URL.createObjectURL(blob));
+    //upload();
+    //setVideoUrl(URL.createObjectURL(blob));
     //var a = document.createElement("a");
     //document.body.appendChild(a);
     //a.style = "display: none";
@@ -83,13 +99,14 @@ function App({ classes }){
   }
 
   const download = ()=>{
-    var a = document.createElement("a");
-    document.body.appendChild(a);
-    a.style = "display: none";
-    a.href = videoUrl;
-    a.download = "gravacao.webm";
-    a.click();
-    window.URL.revokeObjectURL(videoUrl);
+    FileSaver.saveAs(videoUrl, audioName.current);
+    // var a = document.createElement("a");
+    // document.body.appendChild(a);
+    // a.style = "display: none";
+    // a.href = videoUrl;
+    // a.download = "gravacao.webm";
+    // a.click();
+    //window.URL.revokeObjectURL(videoUrl);
   }
 
   const share = () =>{
@@ -104,6 +121,30 @@ function App({ classes }){
     togglePlay();
   }
 
+  const upload =(blob)=>{
+    const uploadAudio = storage.ref(`audio/${audioName.current}`).put(blob);
+    uploadAudio.on(
+      "state_changed",
+      snapshot => {console.log('uploading',snapshot)},
+      error => {console.log(error)},
+      () => {
+        storage.ref("audio").child(audioName.current).getDownloadURL().then(url => setVideoUrl(url));
+      }
+
+    );
+  }
+
+  async function blobFromURL(url) {
+    var blob = await fetch(url)
+      .then(r => r.blob())
+      .then(blob => {
+        console.log(blob);
+        //setAudioFile(blob);
+        upload(blob);
+      });
+
+    return blob
+   }
    //useEffect(()=>{
    //    playerState.playing ? videoPlayer.current.play() : videoPlayer.current.pause();
    //}, [playerState.playing]);
@@ -150,8 +191,8 @@ function App({ classes }){
         height='100%'
         onEnded={onEnded}
       />
-        <div>
-          <Box component="div" display="inline" p={1} m={1}>
+        <Box component="div" p={1} m={1}> 
+          <Box component="div" className={classes.box} p={1} m={1}>
 
             <Button 
             color="primary" 
@@ -163,26 +204,32 @@ function App({ classes }){
               {playerState.playing ? "Parar" : "Iniciar"}
             </Button>
           </Box>
-          <Box component="div" display="inline" p={1} m={1} >
-            {videoUrl != null &&
-              <Button 
-                color="primary" 
-                variant="contained"        
-                size="large"
-                startIcon={<CloudDownloadIcon/>}
-                onClick={download}
-              >
-                Baixar áudio
+          {videoUrl != null && [
+            <Box component="div" className={classes.box} p={1} m={1} >            
+                <Button 
+                  color="primary" 
+                  variant="contained"        
+                  size="large"
+                  startIcon={<CloudDownloadIcon/>}
+                  onClick={download}
+                >
+                  Baixar áudio
+                </Button>           
+            </Box>,
+            <Box component="div" className={classes.box} p={1} m={1} > 
+            <Button 
+            color="primary" 
+            variant="contained"        
+            size="large">
+              <WhatsappShareButton
+                url={videoUrl}
+                >
+                  Compartilhar gravação
+              </WhatsappShareButton>
               </Button>
-            //  <WhatsappShareButton
-            //   url={videoUrl}
-            //   disabled={!videoUrl}
-            //   >
-            //     Compartilhar gravação
-            // </WhatsappShareButton>
-}
-          </Box>
-        </div>
+            </Box>
+          ]}
+        </Box>
         </Grid>
       </CardContent>
     </Grid>
