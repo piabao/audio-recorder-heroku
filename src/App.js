@@ -9,15 +9,18 @@ import {WhatsappShareButton} from "react-share";
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import {  Grid, Card, CardHeader, CardContent, Avatar, IconButton, Button, Box } from "@material-ui/core";
 
-const styles = () => ({
+const styles = theme => ({
   root: {
+    [theme.breakpoints.down("md")]: {
+      padding: "0px",
+    },
     padding: "50px 100px",
     zIndex: 999,
     position: "absolute"
   },
   card: {
     display: "flex",
-    height: "calc(100vh - 100px)"
+    //height: "calc(100vh - 100px)"
   },
   rightBorder: {
     borderRight: "solid #d0D0D0 1px"
@@ -30,11 +33,12 @@ const styles = () => ({
     height: 200,
     width: "100%",
     top: 0,
-    background: "#7159C1"
+    background: "#de8771"
   },
   rightContainer: {
     background:
-      "url(https://media.istockphoto.com/vectors/music-notes-group-musical-notes-background-vector-vector-id1154801056) center center",
+    "url(https://images.unsplash.com/photo-1548504778-b14db6c34b04?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8) center center",
+      //"url(https://png.pngtree.com/thumb_back/fw800/back_our/20190619/ourmid/pngtree-minimalist-music-master-background-image_133616.jpg) center center",
     flex: 1
   }
 });
@@ -96,6 +100,10 @@ function App({ classes }){
      })
   }
 
+  const onEnded =()=>{
+    togglePlay();
+  }
+
    //useEffect(()=>{
    //    playerState.playing ? videoPlayer.current.play() : videoPlayer.current.pause();
    //}, [playerState.playing]);
@@ -118,7 +126,7 @@ function App({ classes }){
   }
 
   const RightContainer = ({ classes }) => (
-    <Grid>
+    <Grid xs={12} md={12} >
       <CardHeader
         avatar={
           <Avatar aria-label="Recipe" className={classes.avatar}>
@@ -134,13 +142,16 @@ function App({ classes }){
       />
       <CardContent className={classes.rightContainer} >
       <Grid>
-      <ReactPlayer url={video_link}
-      playing={playerState.playing}
+      <ReactPlayer 
+        url={video_link}
+        playing={playerState.playing}
+        playIcon={<PlayArrowIcon />}
         width='100%'
         height='100%'
+        onEnded={onEnded}
       />
         <div>
-          <Box component="div" display="inline" p={1} m={1} bgcolor="background.paper">
+          <Box component="div" display="inline" p={1} m={1}>
 
             <Button 
             color="primary" 
@@ -152,14 +163,14 @@ function App({ classes }){
               {playerState.playing ? "Parar" : "Iniciar"}
             </Button>
           </Box>
-          <Box component="div" display="inline" p={1} m={1} bgcolor="background.paper">
+          <Box component="div" display="inline" p={1} m={1} >
             {videoUrl != null &&
               <Button 
-              color="primary" 
-              variant="contained"        
-              size="large"
-              startIcon={<CloudDownloadIcon/>}
-              onClick={download}
+                color="primary" 
+                variant="contained"        
+                size="large"
+                startIcon={<CloudDownloadIcon/>}
+                onClick={download}
               >
                 Baixar áudio
               </Button>
@@ -180,7 +191,7 @@ function App({ classes }){
   return(
     <div>
       <div className={classes.background} />
-      <Grid container className={classes.root}>
+      <Grid xs={12} container className={classes.root}>
         <Grid item xs={12}>
           <Card className={classes.card}>
             <Grid container>
