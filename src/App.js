@@ -9,8 +9,9 @@ import {WhatsappShareButton} from "react-share";
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import {  Grid, Card, CardHeader, CardContent, Avatar, IconButton, Button, Box } from "@material-ui/core";
-import { storage } from './firebase';
+import { storage, database } from './firebase';
 import FileSaver from 'file-saver';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 const styles = theme => ({
   root: {
@@ -55,9 +56,12 @@ function App({ classes }){
   const video_link = "https://download-a.akamaihd.net/files/media_publication/e1/sjjm_CR_022_r720P.mp4";
 
   //const [audioName, setAudioName] = useState(null);
+  const [originalVideoURL, setOriginalVideoURL] = useState(null);
+  const [originalVideoName, setOriginalVideoName] = useState('teste');
   const [videoUrl, setVideoUrl] = useState(null);
   const [recorder, setRecorder] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
+  const [loading, setloading] = useState(false);
   const [playerState, setPlayerState] = useState({
     playing: false,
   });
@@ -68,6 +72,8 @@ function App({ classes }){
     if(playerState.playing){
       recorder.stop();
     }else{
+      setloading(false);
+      setVideoUrl(null);      
       recorder.start();
     }
     setPlayerState({
@@ -85,7 +91,7 @@ function App({ classes }){
       type: "video/webm"
     });
     audioName.current = `record-${new Date().getTime()}.webm`
-    //setAudioName();
+    setloading(true);
     blobFromURL(URL.createObjectURL(blob));
     //upload();
     //setVideoUrl(URL.createObjectURL(blob));
@@ -128,7 +134,9 @@ function App({ classes }){
       snapshot => {console.log('uploading',snapshot)},
       error => {console.log(error)},
       () => {
-        storage.ref("audio").child(audioName.current).getDownloadURL().then(url => setVideoUrl(url));
+        storage.ref("audio").child(audioName.current).getDownloadURL().then(url => {
+          setloading(false);
+          setVideoUrl(url)});
       }
 
     );
@@ -145,14 +153,17 @@ function App({ classes }){
 
     return blob
    }
-   //useEffect(()=>{
-   //    playerState.playing ? videoPlayer.current.play() : videoPlayer.current.pause();
-   //}, [playerState.playing]);
 
   useEffect(()=>{
     if (recorder === null) {
       requestRecorder().then(setRecorder, console.error);
     }
+
+    const db = database.ref().child('originalVideoName');
+    db.on('value', snap => setOriginalVideoName(snap.val()));
+
+    const db2 = database.ref().child('originalVideoURL');
+    db2.on('value', snap => {setOriginalVideoURL(snap.val()); console.log(snap.val())});
   }, []);
 
   useEffect(()=>{
@@ -179,12 +190,12 @@ function App({ classes }){
             <MoreVertIcon />
           </IconButton>
         }
-        title="‘Ann chante ak kè kontan’ pou Jewova - 22. Wayòm nan deja tabli — Fò l vini!"
+        title={`Ann chante ak kè kontan pou Jewova - ${originalVideoName}`}
       />
       <CardContent className={classes.rightContainer} >
       <Grid>
       <ReactPlayer 
-        url={video_link}
+        url={originalVideoURL}
         playing={playerState.playing}
         playIcon={<PlayArrowIcon />}
         width='100%'
@@ -204,6 +215,11 @@ function App({ classes }){
               {playerState.playing ? "Parar" : "Iniciar"}
             </Button>
           </Box>
+          { loading &&
+            <Box component="div" className={classes.box} p={1} m={1} >
+              <CircularProgress disableShrink />
+            </Box>
+          }
           {videoUrl != null && [
             <Box component="div" className={classes.box} p={1} m={1} >            
                 <Button 
